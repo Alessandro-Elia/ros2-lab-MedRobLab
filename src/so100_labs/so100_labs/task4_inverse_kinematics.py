@@ -4,7 +4,7 @@
 #      Hands-on ROS2 - SO-100 arm - Task 4: End-effector commands with IK
 #                                   2026-2027
 #
-# Complete every line marked with  # TODO : replace the `...` with your code.
+# SOLUTION - reference implementation of the guided TODO version.
 # Each TODO is ONE short line of Python. The hints tell you which Python tool to use.
 #
 # Goal: command the arm in Cartesian space: "put the gripper at (x, y, z) with
@@ -73,10 +73,10 @@ def numerical_jacobian(q, eps=1e-6):
 
     J = np.zeros((4, 4))
     for i in range(4):                  # i = 0, 1, 2, 3  -> the first 4 joints
-        q_pert = ...     # TODO a COPY of q (not q itself!)
-        q_pert[i] = ...  # TODO move only joint i by eps
-        f1 = ...         # TODO task vector at q_pert
-        J[:, i] = ...    # TODO forward difference -> column i
+        q_pert = q.copy()
+        q_pert[i] = q_pert[i] + eps
+        f1 = task_vector(q_pert)
+        J[:, i] = (f1 - f0) / eps
     return J
 
 
@@ -92,16 +92,16 @@ def inverse_kinematics(target_xyz, pitch, q_seed, tol=1e-4, max_iterations=200, 
     q = np.array(q_seed, dtype=float)   # 5 joints (a new array); only q[:4] will be changed
     x, y, z = target_xyz                # unpack the target position
 
-    target = ...  # TODO numpy array [x, y, z, pitch]
+    target = np.array([x, y, z, pitch])
     W = np.array([1.0, 1.0, 1.0, 0.1])  # weights of the rows [x, y, z, pitch]
 
     converged = False
     for iteration in range(max_iterations):
 
         # 1) Error and convergence check
-        e = ...               # TODO task-space error
-        position_error = ...  # TODO norm of the first 3 entries of e
-        pitch_error = ...     # TODO absolute value of the pitch entry (index 3)
+        e = target - task_vector(q)
+        position_error = np.linalg.norm(e[:3])
+        pitch_error = abs(e[3])
         if position_error < tol and pitch_error < 10 * tol:
             converged = True
             break                       # leave the for loop
@@ -109,17 +109,17 @@ def inverse_kinematics(target_xyz, pitch, q_seed, tol=1e-4, max_iterations=200, 
         # 2) Weighted Jacobian and error: row i multiplied by W[i]
         #    W[:, None] turns W into a 4x1 column, so J * W[:, None] scales each ROW
         J = numerical_jacobian(q)
-        J_w = ...  # TODO
-        e_w = ...  # TODO element-wise product of e and W
+        J_w = J * W[:, None]
+        e_w = e * W
 
         # 3) Damped least squares step  dq = J_w^T (J_w J_w^T + lambda^2 I)^-1 e_w
-        A = ...    # TODO J_w J_w^T + damping^2 I   (use @, .T, **, np.eye)
-        sol = ...  # TODO solve A sol = e_w  (np.linalg.solve, NOT inv)
-        dq = ...   # TODO
+        A = J_w @ J_w.T + damping**2 * np.eye(4)
+        sol = np.linalg.solve(A, e_w)
+        dq = J_w.T @ sol
 
         # 4) Update ONLY the first 4 joints and clamp them into the limits
-        q[:4] = ...  # TODO
-        q[:4] = ...  # TODO (hint: np.clip with LOWER[:4] and UPPER[:4])
+        q[:4] = q[:4] + dq
+        q[:4] = np.clip(q[:4], LOWER[:4], UPPER[:4])
 
     if not converged:
         raise UnreachableError(f'IK did not converge for {target_xyz}, pitch {pitch:.2f}')

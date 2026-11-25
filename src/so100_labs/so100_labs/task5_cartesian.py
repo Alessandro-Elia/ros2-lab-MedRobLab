@@ -46,16 +46,16 @@ def linear_interpolation(p0, p1, step=0.005):
     """Points on the straight segment p0 -> p1, INCLUDING both ends, spaced at most `step` m
     apart and evenly spaced. Return a list of [x, y, z] lists."""
     p0 = np.asarray(p0, dtype=float)
-    p1 = ...  # TODO same for p1
+    p1 = np.asarray(p1, dtype=float)  # TODO same for p1
 
-    length = ...  # TODO length of the segment (hint: np.linalg.norm)
-    n = ...       # TODO number of intervals: length / step rounded UP (math.ceil)
-    n = ...       # TODO at least 1 (hint: max())
+    length = np.linalg.norm(p1-p0)  # TODO length of the segment (hint: np.linalg.norm)
+    n = math.ceil(length/step)       # TODO number of intervals: length / step rounded UP (math.ceil)
+    n = max(1,n)      # TODO at least 1 (hint: max())
 
     points = []
-    for k in range(...):  # TODO k must go 0, 1, ..., n  (both ends included!)
-        p_k = ...         # TODO point k:  p0 + (p1 - p0) * k / n
-        points.append(...)  # TODO add it AS A LIST (hint: .tolist())
+    for k in range(n+1):  # TODO k must go 0, 1, ..., n  (both ends included!)
+        p_k = p0 + (p1-p0) * k/n         # TODO point k:  p0 + (p1 - p0) * k / n
+        points.append(p_k.tolist())  # TODO add it AS A LIST (hint: .tolist())
     return points
 
 
@@ -75,8 +75,8 @@ def cartesian_path(points, pitch, q_seed):
     path = []
     q = q_seed
     for p in points:
-        q = ...  # TODO IK for point p, seeded with the PREVIOUS solution q
-        ...      # TODO add q at the end of path
+        q = inverse_kinematics(p, pitch, q)  # TODO IK for point p, seeded with the PREVIOUS solution q
+        path.append(q)      # TODO add q at the end of path
     return path
 
     # QUESTION: what could happen if you always used q_seed as seed instead?
@@ -93,13 +93,13 @@ def time_parametrize(joint_path, q_start, max_velocity=MAX_VELOCITY * 0.5, min_d
         # largest joint change between q_prev and q
         delta = 0.0
         for a, b in zip(q, q_prev):
-            change = ...  # TODO absolute change of this joint
-            delta = ...   # TODO keep the largest one (hint: max())
+            change = abs(a - b)  # TODO absolute change of this joint
+            delta = max(delta, change)   # TODO keep the largest one (hint: max())
 
-        step_time = ...   # TODO duration of this step (see docstring)
-        t = ...           # TODO
+        step_time = max(min_dt, delta / max_velocity)   # TODO duration of this step (see docstring)
+        t = t + step_time           # TODO
         times.append(t)
-        q_prev = ...      # TODO the next step starts from q
+        q_prev = q      # TODO the next step starts from q
     return times
 
 
@@ -160,27 +160,27 @@ def pick_and_place(arm, pick=(0.08, -0.24, 0.013), place=(-0.08, -0.22, 0.013), 
         return False
 
     # 4. Close the gripper
-    if not ...:  # TODO
+    if not arm.gripper(GRIPPER_CLOSED):  # TODO
         return False
 
-    # 5a. Straight line up (from pick to above the pick point)
-    if not ...:  # TODO
+    # 5a. Straight line up
+    if not follow_cartesian(arm, linear_interpolation(pick, above(pick)), DOWN): # TODO
         return False
 
-    # 5b. Straight line from above the pick point to above the place point
-    if not ...:  # TODO
+    # 5b. Straight line to above place point
+    if not follow_cartesian(arm, linear_interpolation(above(pick), above(place)), DOWN): # TODO
         return False
 
-    # 5c. Straight line down to the place point
-    if not ...:  # TODO
+    # 5c. Straight line down
+    if not follow_cartesian(arm, linear_interpolation(above(place), place), DOWN): # TODO
         return False
 
-    # 6. Open the gripper (release the object)
-    if not ...:  # TODO
+    # 6. Open the gripper
+    if not arm.gripper(GRIPPER_OPEN): # TODO
         return False
 
     # 7. Straight line back up
-    if not ...:  # TODO
+    if not follow_cartesian(arm, linear_interpolation(place, above(place)), DOWN): # TODO
         return False
 
     return True

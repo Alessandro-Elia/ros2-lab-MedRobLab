@@ -67,9 +67,9 @@ def order_joints(named_positions):
 
     q = []                          # empty list (MATLAB: q = [])
     for name in ARM_JOINTS:         # `name` takes the value of each joint name in turn
-        value = ...  # TODO read the value stored under the key `name`
-        value = ...  # TODO convert it to a real number (hint: float())
-        ...          # TODO add `value` at the end of the list q
+        value = named_positions[name]  # TODO read the value stored under the key `name`
+        value = float(value)  # TODO convert it to a real number (hint: float())
+        q.append(value)          # TODO add `value` at the end of the list q
     return q
 
 
@@ -82,10 +82,10 @@ def clamp_to_limits(q):
 
     q_clamped = []
     for value, low, high in zip(q, LOWER, UPPER):
-        if ...:              # TODO is value below the lower limit?
-            value = ...      # TODO
-        elif ...:            # TODO is value above the upper limit?
-            value = ...      # TODO
+        if value<low:              # TODO is value below the lower limit?
+            value = low      # TODO
+        elif value>high:            # TODO is value above the upper limit?
+            value = high      # TODO
         q_clamped.append(value)
     return q_clamped
 
@@ -106,24 +106,24 @@ def interpolate_steps(q_start, q_goal, max_step=MAX_STEP):
     # 1) Largest change among all the joints
     delta = 0.0
     for start, goal in zip(q_start, q_goal):
-        change = ...  # TODO absolute change of this joint (hint: abs())
+        change = abs(goal-start)  # TODO absolute change of this joint (hint: abs())
         if change > delta:
             delta = change
 
     # 2) Number of steps: delta / max_step rounded UP, and at least 1
-    n = ...  # TODO round up (hint: math.ceil())
-    n = ...  # TODO make sure n >= 1 (hint: max())
+    n = math.ceil(delta/max_step)  # TODO round up (hint: math.ceil())
+    n = max(1, n)  # TODO make sure n >= 1 (hint: max())
 
     # 3) Linear interpolation: at step k (k = 1, ..., n) every joint has done
     #    the fraction k/n of its motion:   value = start + (goal - start) * k / n
     steps = []                          # list of lists (one joint vector per step)
     for k in range(1, n + 1):           # k = 1, 2, ..., n
-        fraction = ...  # TODO
+        fraction = k/n  # TODO
         q_k = []                        # joint vector of step k
         for start, goal in zip(q_start, q_goal):
-            value = ...  # TODO position of this joint at step k
+            value = start + (goal-start)* fraction  # TODO position of this joint at step k
             q_k.append(value)
-        ...  # TODO add q_k at the end of steps
+            steps.append(q_k) # TODO add q_k at the end of steps
     return steps
 
     # QUESTION: with MAX_STEP = 0.02 rad and RATE_HZ = 50 Hz, what is the
